@@ -1,6 +1,28 @@
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  service: "Outlook365",
+  host: 'smtp.office365.com',
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
+  tls: {
+    ciphers: 'SSLv3',
+  },
+});
+
+
+transporter
+  .verify()
+  .then(() => {
+    console.log('Mail server is ready');
+  })
+  .catch((err) => {
+    console.error('Error verifying mail server:', err);
+  });
 
 async function sendRegistrationEmail(studentEmail, studentName, studentId) {
   const emailTemplate = `
@@ -125,16 +147,6 @@ async function sendRegistrationEmail(studentEmail, studentName, studentId) {
                 font-size: 14px;
                 color: #6b7280;
             }
-            .contact-info {
-                margin-top: 15px;
-                padding-top: 15px;
-                border-top: 1px solid #e5e7eb;
-            }
-            .contact-info p {
-                margin: 3px 0;
-                font-size: 13px;
-                color: #9ca3af;
-            }
             .highlight {
                 color: #1e40af;
                 font-weight: 600;
@@ -152,7 +164,8 @@ async function sendRegistrationEmail(studentEmail, studentName, studentId) {
                 <div class="greeting">Dear ${studentName},</div>
 
                 <div class="message">
-                    Thank you for completing your registration with <span class="highlight">Bhagwan Parshuram Institute of Technology</span>.
+                    Thank you for completing your registration with
+                    <span class="highlight">Bhagwan Parshuram Institute of Technology</span>.
                 </div>
 
                 <div class="status-box">
@@ -176,7 +189,7 @@ async function sendRegistrationEmail(studentEmail, studentName, studentId) {
                         <strong>Registration Date:</strong> ${new Date().toLocaleDateString('en-US', {
                           year: 'numeric',
                           month: 'long',
-                          day: 'numeric'
+                          day: 'numeric',
                         })}
                     </div>
                 </div>
@@ -192,17 +205,21 @@ async function sendRegistrationEmail(studentEmail, studentName, studentId) {
   `;
 
   try {
-    await resend.emails.send({
+    await transporter.sendMail({
       from: `BPIT Admissions <${process.env.EMAIL_USER}>`,
-      to: [studentEmail],
+      to: studentEmail,
       subject: 'Registration Confirmation - Welcome to BPIT! 🎓',
       html: emailTemplate,
-      text: `Dear ${studentName},\n\nYour registration (ID: ${studentId}) was successful.\n\nBPIT Admissions Team`
+      text: `Dear ${studentName},
+
+Your registration (ID: ${studentId}) was successful.
+
+BPIT Admissions Team`,
     });
 
     return true;
   } catch (error) {
-    console.error('Registration email Resend error:', error);
+    console.error('Registration email Nodemailer error:', error);
     return false;
   }
 }
